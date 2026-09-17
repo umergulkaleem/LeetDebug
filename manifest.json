@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "LeetCode Debug Toggle",
+  "version": "1.3.0",
+  "description": "Toggle debug statements in the LeetCode editor with configurable keyboard shortcuts.",
+  "permissions": ["scripting", "storage"],
+  "host_permissions": ["https://leetcode.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://leetcode.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "LeetCode Debug Toggle",
+    "default_popup": "popup.html"
+  }
+}

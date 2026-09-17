@@ -1,0 +1,179 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>LeetCode Debug Toggle</title>
+
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        width: 320px;
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background: #111827;
+        color: white;
+      }
+
+      h2 {
+        margin: 0 0 18px 0;
+        font-size: 18px;
+      }
+
+      .setting {
+        margin-bottom: 14px;
+        padding: 14px;
+        background: #1f2937;
+        border-radius: 8px;
+      }
+
+      .label {
+        font-size: 13px;
+        color: #d1d5db;
+        margin-bottom: 8px;
+      }
+
+      .shortcut {
+        font-size: 16px;
+        font-weight: bold;
+        margin-bottom: 10px;
+      }
+
+      button {
+        width: 100%;
+        border: none;
+        border-radius: 6px;
+        padding: 9px;
+        background: #2563eb;
+        color: white;
+        font-size: 13px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: #1d4ed8;
+      }
+
+      #status {
+        margin-top: 12px;
+        text-align: center;
+        font-size: 12px;
+        color: #9ca3af;
+      }
+
+      /* Shortcut modal */
+
+      #shortcutModal {
+        display: none;
+
+        position: fixed;
+        inset: 0;
+
+        background: rgba(0, 0, 0, 0.75);
+
+        align-items: center;
+        justify-content: center;
+
+        z-index: 9999;
+      }
+
+      #shortcutModal.show {
+        display: flex;
+      }
+
+      .modal {
+        width: 280px;
+        padding: 20px;
+
+        background: #1f2937;
+        border-radius: 10px;
+
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+
+        text-align: center;
+      }
+
+      .modal h3 {
+        margin: 0 0 10px 0;
+        font-size: 16px;
+      }
+
+      .modal-description {
+        color: #9ca3af;
+        font-size: 12px;
+        margin-bottom: 16px;
+      }
+
+      #pressedShortcut {
+        min-height: 50px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        background: #111827;
+
+        border: 1px solid #374151;
+        border-radius: 8px;
+
+        font-size: 17px;
+        font-weight: bold;
+
+        margin-bottom: 15px;
+
+        color: #60a5fa;
+      }
+
+      .cancel-button {
+        background: #374151;
+      }
+
+      .cancel-button:hover {
+        background: #4b5563;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h2>LeetCode Debug Toggle</h2>
+
+    <div class="setting">
+      <div class="label">Comment Shortcut</div>
+
+      <div id="commentShortcut" class="shortcut">Alt + P</div>
+
+      <button id="changeComment">Change Comment Shortcut</button>
+    </div>
+
+    <div class="setting">
+      <div class="label">Uncomment Shortcut</div>
+
+      <div id="uncommentShortcut" class="shortcut">Alt + O</div>
+
+      <button id="changeUncomment">Change Uncomment Shortcut</button>
+    </div>
+
+    <div id="status"></div>
+
+    <!-- Shortcut setting modal -->
+
+    <div id="shortcutModal">
+      <div class="modal">
+        <h3 id="modalTitle">Change Shortcut</h3>
+
+        <div class="modal-description">
+          Press the keyboard shortcut you want to use.
+        </div>
+
+        <div id="pressedShortcut">Press your shortcut...</div>
+
+        <button id="cancelShortcut" class="cancel-button">Cancel</button>
+      </div>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
