@@ -2,6 +2,7 @@
 
 A Chrome extension that comments and uncomments debug statements in the LeetCode editor with a single keyboard shortcut.
 
+If this saves you time, consider giving it a star. It helps others find it.
 ## Supported Languages
 
 - Python
