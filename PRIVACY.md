@@ -1,0 +1,1 @@
+LeetCode Debug Toggle does not collect, store, transmit or share any personal data or code. It saves your two keyboard shortcut preferences locally in your browser using Chrome storage. It runs only on leetcode.com. No analytics, advertising or remote code is used. Contact: your verified email.
