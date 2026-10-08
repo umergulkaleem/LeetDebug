@@ -51,46 +51,49 @@ document.addEventListener("DOMContentLoaded", () => {
       .join(" + ");
   }
 
-  function getShortcut(event) {
-    const parts = [];
+  function getKeyName(event) {
+    const code = event.code || "";
 
-    if (event.ctrlKey) {
-      parts.push("CTRL");
+    if (/^Key[A-Z]$/.test(code)) {
+      return code.slice(3);
     }
 
-    if (event.altKey) {
-      parts.push("ALT");
+    if (/^Digit[0-9]$/.test(code)) {
+      return code.slice(5);
     }
 
-    if (event.shiftKey) {
-      parts.push("SHIFT");
-    }
-
-    if (event.metaKey) {
-      parts.push("META");
-    }
-
-    let key = event.key.toUpperCase();
+    const key = (event.key || "").toUpperCase();
 
     const specialKeys = {
       " ": "SPACE",
       ESCAPE: "ESC",
-      ENTER: "ENTER",
-      TAB: "TAB",
-      BACKSPACE: "BACKSPACE",
-      DELETE: "DELETE",
       ARROWUP: "UP",
       ARROWDOWN: "DOWN",
       ARROWLEFT: "LEFT",
       ARROWRIGHT: "RIGHT",
     };
 
-    if (specialKeys[key]) {
-      key = specialKeys[key];
-    }
+    return specialKeys[key] || key;
+  }
 
-    // User only pressed Ctrl/Alt/Shift/Meta
-    if (key === "CTRL" || key === "ALT" || key === "SHIFT" || key === "META") {
+  function getShortcut(event) {
+    const parts = [];
+
+    if (event.ctrlKey) parts.push("CTRL");
+    if (event.altKey) parts.push("ALT");
+    if (event.shiftKey) parts.push("SHIFT");
+    if (event.metaKey) parts.push("META");
+
+    const key = getKeyName(event);
+
+    // User only pressed a modifier
+    if (
+      !key ||
+      key === "CONTROL" ||
+      key === "ALT" ||
+      key === "SHIFT" ||
+      key === "META"
+    ) {
       return null;
     }
 

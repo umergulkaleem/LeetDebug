@@ -15,6 +15,7 @@
       "run_at": "document_idle"
     }
   ],
+  "icons": { "128": "LD 128.png" },
   "action": {
     "default_title": "LeetCode Debug Toggle",
     "default_popup": "popup.html"

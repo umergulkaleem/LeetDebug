@@ -1,7 +1,4 @@
 (() => {
-  /*
-   * Prevent duplicate initialization.
-   */
   if (window.__leetcodeDebugToggleInitialized) {
     return;
   }
@@ -9,16 +6,11 @@
   window.__leetcodeDebugToggleInitialized = true;
 
   const EXTENSION_SOURCE = "leetcode-debug-toggle-extension";
-
   const PAGE_SOURCE = "leetcode-debug-toggle-page";
 
   let operationInProgress = false;
 
-  /*
-   * ==========================================
-   * LANGUAGE DETECTION
-   * ==========================================
-   */
+  /* ---------- LANGUAGE DETECTION ---------- */
 
   function detectLanguage(model) {
     let language = "";
@@ -27,29 +19,15 @@
       language = model.getLanguageId().toLowerCase();
     }
 
-    if (language.includes("python")) {
-      return "python";
-    }
+    if (language.includes("python")) return "python";
+    if (language.includes("javascript")) return "javascript";
+    if (language.includes("typescript")) return "typescript";
+    if (language.includes("java")) return "java";
+    if (language.includes("cpp") || language.includes("c++")) return "cpp";
+    if (language.includes("csharp") || language.includes("c#")) return "csharp";
 
-    if (language.includes("javascript")) {
-      return "javascript";
-    }
-
-    if (language.includes("typescript")) {
-      return "typescript";
-    }
-
-    if (language.includes("java")) {
-      return "java";
-    }
-
-    if (language.includes("cpp") || language.includes("c++")) {
-      return "cpp";
-    }
-
-    if (language.includes("csharp") || language.includes("c#")) {
-      return "csharp";
-    }
+    // A language id exists but is not supported: never guess.
+    if (language) return "unknown";
 
     const code =
       model && typeof model.getValue === "function" ? model.getValue() : "";
@@ -57,19 +35,13 @@
     if (/\bdef\s+\w+\s*\(/.test(code) || /\bprint\s*\(/.test(code)) {
       return "python";
     }
-
     if (/console\.(log|debug|info|warn|error)\s*\(/.test(code)) {
       return "javascript";
     }
-
     if (/System\.(out|err)\.(println|print|printf)\s*\(/.test(code)) {
       return "java";
     }
-
-    if (/\b(std::)?cout\s*<</.test(code)) {
-      return "cpp";
-    }
-
+    if (/\b(std::)?cout\s*<</.test(code)) return "cpp";
     if (/\bConsole\.(WriteLine|Write|Error|Debug)\s*\(/.test(code)) {
       return "csharp";
     }
@@ -77,11 +49,7 @@
     return "unknown";
   }
 
-  /*
-   * ==========================================
-   * DEBUG DETECTION
-   * ==========================================
-   */
+  /* ---------- DEBUG DETECTION ---------- */
 
   function isPythonDebug(line) {
     return /^\s*print\s*\(/.test(line);
@@ -109,32 +77,23 @@
     switch (language) {
       case "python":
         return isPythonDebug(line);
-
       case "javascript":
       case "typescript":
         return isJavaScriptDebug(line);
-
       case "java":
         return isJavaDebug(line);
-
       case "cpp":
       case "c++":
         return isCppDebug(line);
-
       case "csharp":
       case "c#":
         return isCSharpDebug(line);
-
       default:
         return false;
     }
   }
 
-  /*
-   * ==========================================
-   * COMMENT HANDLING
-   * ==========================================
-   */
+  /* ---------- COMMENT HANDLING ---------- */
 
   function getCommentPrefix(language) {
     return language === "python" ? "#" : "//";
@@ -142,17 +101,13 @@
 
   function commentLine(line, language) {
     const indentation = line.match(/^\s*/)?.[0] || "";
-
     const content = line.slice(indentation.length);
-
     return indentation + getCommentPrefix(language) + " " + content;
   }
 
   function uncommentLine(line, language) {
     const indentation = line.match(/^\s*/)?.[0] || "";
-
     const content = line.slice(indentation.length);
-
     const prefix = getCommentPrefix(language);
 
     if (content.startsWith(prefix + " ")) {
@@ -168,77 +123,152 @@
 
   function isCommentedDebugLine(line, language) {
     const indentation = line.match(/^\s*/)?.[0] || "";
-
     const content = line.slice(indentation.length);
-
     const prefix = getCommentPrefix(language);
 
     if (!content.startsWith(prefix)) {
       return false;
     }
 
-    const uncommented = uncommentLine(line, language);
-
-    return isDebugLine(uncommented, language);
+    return isDebugLine(uncommentLine(line, language), language);
   }
 
-  /*
-   * ==========================================
-   * COMMENT
-   * ==========================================
-   */
+  /* ---------- SAFETY CHECKS ---------- */
 
-  function commentDebugStatements(code, language) {
-    const lines = code.split("\n");
+  function stripStrings(text) {
+    return text.replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g, '""');
+  }
 
-    let count = 0;
+  function stripTrailingComment(text, language) {
+    const prefix = getCommentPrefix(language);
+    const index = text.indexOf(prefix);
+    return index === -1 ? text : text.slice(0, index);
+  }
 
-    for (let i = 0; i < lines.length; i++) {
-      if (isDebugLine(lines[i], language)) {
-        lines[i] = commentLine(lines[i], language);
+  // False when the statement continues on the next line.
+  function isCompleteStatement(line, language) {
+    const text = stripTrailingComment(stripStrings(line), language).trim();
 
-        count++;
-      }
+    if (language === "cpp" || language === "c++") {
+      return text.endsWith(";");
     }
 
-    return {
-      changed: count > 0,
-      count,
-      code: lines.join("\n"),
-    };
-  }
+    let depth = 0;
 
-  /*
-   * ==========================================
-   * UNCOMMENT
-   * ==========================================
-   */
-
-  function uncommentDebugStatements(code, language) {
-    const lines = code.split("\n");
-
-    let count = 0;
-
-    for (let i = 0; i < lines.length; i++) {
-      if (isCommentedDebugLine(lines[i], language)) {
-        lines[i] = uncommentLine(lines[i], language);
-
-        count++;
-      }
+    for (const ch of text) {
+      if (ch === "(") depth++;
+      if (ch === ")") depth--;
     }
 
-    return {
-      changed: count > 0,
-      count,
-      code: lines.join("\n"),
-    };
+    return depth === 0;
   }
 
-  /*
-   * ==========================================
-   * FIND EDITOR
-   * ==========================================
-   */
+  function isCommentOnly(line, language) {
+    return line.trim().startsWith(getCommentPrefix(language));
+  }
+
+  function indentOf(line) {
+    return (line.match(/^\s*/)?.[0] || "").length;
+  }
+
+  // True when commenting this line would leave a block empty (Python)
+  // or turn the next statement into the body (C-style braceless if/for/else).
+  function isSoleBody(lines, index, language) {
+    let prev = index - 1;
+
+    while (
+      prev >= 0 &&
+      (lines[prev].trim() === "" || isCommentOnly(lines[prev], language))
+    ) {
+      prev--;
+    }
+
+    if (prev < 0) {
+      return false;
+    }
+
+    const prevText = lines[prev].trim();
+
+    if (language === "python") {
+      if (!prevText.endsWith(":")) {
+        return false;
+      }
+
+      let next = index + 1;
+
+      while (
+        next < lines.length &&
+        (lines[next].trim() === "" || isCommentOnly(lines[next], language))
+      ) {
+        next++;
+      }
+
+      if (next >= lines.length) {
+        return true;
+      }
+
+      return indentOf(lines[next]) < indentOf(lines[index]);
+    }
+
+    if (prevText.endsWith("{") || prevText.endsWith(";")) {
+      return false;
+    }
+
+    return prevText.endsWith(")") || prevText.endsWith("else");
+  }
+
+  /* ---------- COMMENT / UNCOMMENT ---------- */
+
+  function commentDebugStatements(lines, language) {
+    const output = lines.slice();
+    let count = 0;
+    let skipped = 0;
+
+    for (let i = 0; i < output.length; i++) {
+      if (!isDebugLine(output[i], language)) {
+        continue;
+      }
+
+      if (
+        !isCompleteStatement(output[i], language) ||
+        isSoleBody(output, i, language)
+      ) {
+        skipped++;
+        continue;
+      }
+
+      output[i] = commentLine(output[i], language);
+      count++;
+    }
+
+    return { count, skipped, lines: output };
+  }
+
+  function uncommentDebugStatements(lines, language) {
+    const output = lines.slice();
+    let count = 0;
+    let skipped = 0;
+
+    for (let i = 0; i < output.length; i++) {
+      if (!isCommentedDebugLine(output[i], language)) {
+        continue;
+      }
+
+      const restored = uncommentLine(output[i], language);
+
+      if (!isCompleteStatement(restored, language)) {
+        skipped++;
+        continue;
+      }
+
+      output[i] = restored;
+      count++;
+    }
+
+    return { count, skipped, lines: output };
+  }
+
+  /* ---------- EDITOR ---------- */
 
   function findEditor() {
     if (!window.monaco || !window.monaco.editor) {
@@ -264,11 +294,26 @@
     return editors[0];
   }
 
-  /*
-   * ==========================================
-   * RESULT
-   * ==========================================
-   */
+  // Edits only the lines that changed, so cursor and folds are not reset.
+  function applyLineEdits(editor, oldLines, newLines, editId) {
+    const edits = [];
+
+    for (let i = 0; i < oldLines.length; i++) {
+      if (oldLines[i] !== newLines[i]) {
+        edits.push({
+          range: new window.monaco.Range(
+            i + 1,
+            1,
+            i + 1,
+            oldLines[i].length + 1,
+          ),
+          text: newLines[i],
+        });
+      }
+    }
+
+    editor.executeEdits(editId, edits);
+  }
 
   function sendResult(result) {
     window.postMessage(
@@ -276,15 +321,11 @@
         source: PAGE_SOURCE,
         result,
       },
-      "*",
+      window.location.origin,
     );
   }
 
-  /*
-   * ==========================================
-   * MAIN OPERATION
-   * ==========================================
-   */
+  /* ---------- MAIN OPERATION ---------- */
 
   function performOperation(action) {
     if (operationInProgress) {
@@ -297,11 +338,7 @@
       const editor = findEditor();
 
       if (!editor) {
-        sendResult({
-          success: false,
-          message: "LeetCode editor not found.",
-        });
-
+        sendResult({ success: false, message: "LeetCode editor not found." });
         return;
       }
 
@@ -312,98 +349,62 @@
           success: false,
           message: "Could not access the LeetCode code model.",
         });
-
         return;
       }
-
-      const code = model.getValue();
 
       const language = detectLanguage(model);
 
       if (language === "unknown") {
         sendResult({
           success: false,
-          message: "Could not determine the programming language.",
+          message:
+            "Language not supported. Add it at github.com/umergulkaleem/LeetDebug",
         });
-
         return;
       }
 
-      let result;
+      const oldLines = model.getLinesContent();
+      const isComment = action === "comment-debug-statements";
 
-      /*
-       * ======================================
-       * COMMENT
-       * ======================================
-       */
+      const result = isComment
+        ? commentDebugStatements(oldLines, language)
+        : uncommentDebugStatements(oldLines, language);
 
-      if (action === "comment-debug-statements") {
-        result = commentDebugStatements(code, language);
+      if (result.count === 0) {
+        let message = isComment
+          ? "No active debug statements found."
+          : "No commented debug statements found.";
 
-        if (!result.changed) {
-          sendResult({
-            success: true,
-            action: "none",
-            count: 0,
-            message: "No active debug statements found.",
-          });
-
-          return;
+        if (result.skipped > 0) {
+          message += ` Skipped ${result.skipped} unsafe line${
+            result.skipped === 1 ? "" : "s"
+          }.`;
         }
-
-        editor.executeEdits("leetcode-debug-comment", [
-          {
-            range: model.getFullModelRange(),
-            text: result.code,
-          },
-        ]);
 
         sendResult({
           success: true,
-          action: "comment",
-          count: result.count,
-          language,
+          action: "none",
+          count: 0,
+          skipped: result.skipped,
+          message,
         });
-
         return;
       }
 
-      /*
-       * ======================================
-       * UNCOMMENT
-       * ======================================
-       */
+      applyLineEdits(
+        editor,
+        oldLines,
+        result.lines,
+        isComment ? "leetcode-debug-comment" : "leetcode-debug-uncomment",
+      );
 
-      if (action === "uncomment-debug-statements") {
-        result = uncommentDebugStatements(code, language);
-
-        if (!result.changed) {
-          sendResult({
-            success: true,
-            action: "none",
-            count: 0,
-            message: "No commented debug statements found.",
-          });
-
-          return;
-        }
-
-        editor.executeEdits("leetcode-debug-uncomment", [
-          {
-            range: model.getFullModelRange(),
-            text: result.code,
-          },
-        ]);
-
-        sendResult({
-          success: true,
-          action: "uncomment",
-          count: result.count,
-          language,
-        });
-
-        return;
-      }
+      sendResult({
+        success: true,
+        action: isComment ? "comment" : "uncomment",
+        count: result.count,
+        skipped: result.skipped,
+        language,
+      });
     } catch (error) {
       console.error("[LeetCode Debug Toggle]", error);
 
@@ -418,24 +419,12 @@
     }
   }
 
-  /*
-   * ==========================================
-   * RECEIVE COMMAND
-   * ==========================================
-   */
+  /* ---------- RECEIVE COMMAND ---------- */
 
   window.addEventListener("message", (event) => {
-    if (event.source !== window) {
-      return;
-    }
-
-    if (!event.data) {
-      return;
-    }
-
-    if (event.data.source !== EXTENSION_SOURCE) {
-      return;
-    }
+    if (event.source !== window) return;
+    if (!event.data) return;
+    if (event.data.source !== EXTENSION_SOURCE) return;
 
     if (
       event.data.action !== "comment-debug-statements" &&

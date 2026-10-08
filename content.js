@@ -25,32 +25,18 @@
       .replace("OPTION", "ALT");
   }
 
-  function getEventShortcut(event) {
-    const parts = [];
+  function getKeyName(event) {
+    const code = event.code || "";
 
-    if (event.ctrlKey) {
-      parts.push("CTRL");
+    if (/^Key[A-Z]$/.test(code)) {
+      return code.slice(3);
     }
 
-    if (event.altKey) {
-      parts.push("ALT");
+    if (/^Digit[0-9]$/.test(code)) {
+      return code.slice(5);
     }
 
-    if (event.shiftKey) {
-      parts.push("SHIFT");
-    }
-
-    if (event.metaKey) {
-      parts.push("META");
-    }
-
-    let key = event.key;
-
-    if (!key) {
-      return "";
-    }
-
-    key = key.toUpperCase();
+    const key = (event.key || "").toUpperCase();
 
     const keyMap = {
       " ": "SPACE",
@@ -59,22 +45,23 @@
       ARROWDOWN: "DOWN",
       ARROWLEFT: "LEFT",
       ARROWRIGHT: "RIGHT",
-      ENTER: "ENTER",
-      TAB: "TAB",
-      BACKSPACE: "BACKSPACE",
-      DELETE: "DELETE",
-      INSERT: "INSERT",
-      HOME: "HOME",
-      END: "END",
-      PAGEUP: "PAGEUP",
-      PAGEDOWN: "PAGEDOWN",
     };
 
-    if (keyMap[key]) {
-      key = keyMap[key];
-    }
+    return keyMap[key] || key;
+  }
+
+  function getEventShortcut(event) {
+    const parts = [];
+
+    if (event.ctrlKey) parts.push("CTRL");
+    if (event.altKey) parts.push("ALT");
+    if (event.shiftKey) parts.push("SHIFT");
+    if (event.metaKey) parts.push("META");
+
+    const key = getKeyName(event);
 
     if (
+      !key ||
       key === "CONTROL" ||
       key === "ALT" ||
       key === "SHIFT" ||
@@ -225,11 +212,15 @@
       return;
     }
 
+    const skippedNote = result.skipped
+      ? `, skipped ${result.skipped} unsafe`
+      : "";
+
     if (result.action === "comment") {
       showMessage(
         `Commented ${result.count} debug statement${
           result.count === 1 ? "" : "s"
-        }`,
+        }${skippedNote}`,
       );
       return;
     }
@@ -238,7 +229,7 @@
       showMessage(
         `Uncommented ${result.count} debug statement${
           result.count === 1 ? "" : "s"
-        }`,
+        }${skippedNote}`,
       );
       return;
     }
@@ -265,7 +256,7 @@
         source: EXTENSION_SOURCE,
         action: message.action,
       },
-      "*",
+      window.location.origin,
     );
   });
 })();
